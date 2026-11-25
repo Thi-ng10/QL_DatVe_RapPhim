@@ -31,12 +31,14 @@ namespace DatVe
 
         private void btn_DatVe_Click(object sender, EventArgs e)
         {
-            // Mo Form dat ve
+            FrmDatVe frm = new FrmDatVe();
+            frm.ShowDialog();
         }
 
         private void btn_HoaDon_Click(object sender, EventArgs e)
         {
-            // Mo Form hoa don
+            FrmHoaDon frm = new FrmHoaDon();
+            frm.ShowDialog();
         }
 
         private void btn_BaoCao_Click(object sender, EventArgs e)
@@ -44,5 +46,9 @@ namespace DatVe
             // Mo Form bao cao
         }
 
+        private void Menu_Load(object sender, EventArgs e)
+        {
+
+        }
     }
 }

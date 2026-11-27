@@ -1,0 +1,36 @@
+# Tài Liệu Tích Hợp CSDL & Code Dùng Chung - Đồ Án Đặt Vé Xem Phim (`DatVe`)
+
+## 1. Lưu ý về Cơ Sở Dữ Liệu (`DatVe.sql`)
+* **Hệ quản trị:** SQL Server 2022 (`Database: DatVe`). Tất cả thành viên dùng chung file kết nối `DbKetNoi.cs` và chung `namespace DatVe`.
+* **Ràng buộc giá trị (CHECK Constraints) bắt buộc phải truyền đúng:**
+  * Bảng `PhongChieu`: `PC_TrangThai` chỉ nhận `'Hoạt động'`, `'Bảo trì'`, `'Ngừng hoạt động'`.
+  * Bảng `Ghe`: `G_Loai` chỉ nhận `'Thường'`, `'VIP'`, `'Đôi'`; `G_TrangThai` chỉ nhận `'Hoạt động'`, `'Hỏng'`.
+  * Bảng `SuatChieu`: `SC_TrangThai` chỉ nhận `'Sắp chiếu'`, `'Đang chiếu'`, `'Đã chiếu'`, `'Đã hủy'`.
+  * Bảng `Ve`: `Ve_TrangThai` chỉ nhận `'Trống'`, `'Đang giữ'`, `'Đã đặt'`, `'Đã hủy'`.
+* **Các Trigger đã tự động xử lý ở tầng SQL Server (không cần viết code đè lại):**
+  * `trg_CapNhatSoLuongGhe`: Tự động đếm lại số ghế trong bảng `Ghe` và cập nhật vào `PhongChieu.PC_SLGhe` mỗi khi thêm/xóa ghế.
+  * `TR_SuatChieu_KiemTraLich`: Tự động chặn thêm/sửa suất chiếu nếu phòng đang `'Bảo trì'`/`'Ngừng hoạt động'` hoặc bị trùng khung giờ chiếu.
+  * `TR_Ve_KiemTraPhong`: Tự động chặn xuất vé nếu phòng không hoạt động, suất chiếu đã hủy/đã chiếu, hoặc ghế đang ở trạng thái `'Hỏng'`.
+
+---
+
+## 2. Lưu ý ghép code cho từng thành viên
+
+### Dành cho Người 3 (Module Quản lý Vé & Đặt Vé)
+* **Phân biệt trạng thái:** Bảng `Ghe` chỉ lưu trạng thái vật lý của ghế (`Hoạt động` / `Hỏng`). Trạng thái bán vé theo từng suất chiếu (`Trống` / `Đang giữ` / `Đã đặt` / `Đã hủy`) được quản lý hoàn toàn ở bảng `Ve`.
+* **Tự động đồng bộ giá vé (`Ve_Gia`):** Khi Admin đổi loại ghế ở form `QLGhe` (ví dụ `Thường` $\rightarrow$ `VIP`), hệ thống đã tự động tính và cập nhật lại `Ve_Gia = SC_GiaVe + G_PhuThu` cho toàn bộ vé chưa bán của ghế đó.
+
+### Dành cho Người 4 (Module Quản lý Suất Chiếu)
+* Có thể gọi trực tiếp các hàm `public static` đã viết sẵn trong class `QLGhe` (không cần khởi tạo Form) khi cần sinh ghế hoặc đồng bộ lại sĩ số ghế:
+  * **Tính phụ thu theo loại ghế:**
+    ```csharp
+    decimal phuThu = QLGhe.TinhPhuThu("VIP"); // Trả về: Thường = 0, VIP = 10000, Đôi = 20000
+    ```
+  * **Tạo ghế đơn lẻ hoặc hàng loạt (tự kiểm tra trùng vị trí & tự cập nhật `PC_SLGhe`):**
+    ```csharp
+    int soGheDaTao = QLGhe.TaoHangGhe(maPhong, 'A', 'E', 1, 10, "Thường", "Hoạt động");
+    ```
+  * **Đồng bộ lại số lượng ghế của phòng (`PC_SLGhe`):**
+    ```csharp
+    QLGhe.CapNhatSoLuongGhe(maPhong, conn, tran);
+    ```
